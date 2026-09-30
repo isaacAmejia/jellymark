@@ -234,7 +234,7 @@ class JellyfinClient:
             raise RuntimeError(f"{self.name}: API key is not configured")
         return {"Authorization": (
             f'MediaBrowser Client="JellyMark Sync", Device="Server", '
-            f'DeviceId="jellymark-sync-{self.side}", Version="{APP_VERSION}", '
+            f'DeviceId="jellyfin-watchlist-sync-{self.side}", Version="{APP_VERSION}", '
             f'Token="{self.api_key}"'
         )}
 
@@ -1220,3 +1220,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
