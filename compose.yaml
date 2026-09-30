@@ -1,0 +1,15 @@
+services:
+  jellymark-sync:
+    build: .
+    container_name: jellymark-sync
+    restart: unless-stopped
+    ports:
+      - "8788:8788"
+    environment:
+      DATA_DIR: /data
+      PORT: 8788
+      JWS_ADMIN_TOKEN: "${JWS_ADMIN_TOKEN:?Set JWS_ADMIN_TOKEN to a long random value}"
+    volumes:
+      - ./data:/data
+
+

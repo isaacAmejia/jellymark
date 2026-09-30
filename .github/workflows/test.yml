@@ -1,0 +1,90 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Python syntax
+        run: python -m py_compile sync/app.py
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: JavaScript syntax
+        run: node --check ui/jellymark.js
+      - name: Shell syntax
+        run: bash -n run-docker.sh
+
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium --only-shell
+      - name: Container and browser smoke tests
+        run: |
+          docker build -t jws-test .
+          docker run --rm -d --name jws-test -p 18788:8788 -e JWS_ADMIN_TOKEN=smoke-test jws-test
+          trap 'docker logs jws-test 2>/dev/null || true; docker stop jws-test 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:18788/health; then break; fi
+            sleep 1
+          done
+          node tests/browser-smoke.cjs --admin-only
+          docker stop jws-test
+          node tests/browser-smoke.cjs --ui-only
+      - name: Upload UI review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellymark-ui-review
+          path: test-results/*.png
+          if-no-files-found: ignore
+
+
+  release:
+    name: Publish release
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'Release v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: jellymark-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package and publish tested version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '\r\n' < ui/VERSION)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v${version}"
+          # Never replace an existing release or move its tag.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; leaving it unchanged."
+            exit 0
+          fi
+          mkdir -p dist
+          cp ui/jellymark.js dist/jellymark.js
+          git archive --format=zip --prefix=jellymark/ --output="dist/jellymark-${tag}.zip" HEAD
+          (cd dist && sha256sum jellymark.js "jellymark-${tag}.zip" > SHA256SUMS.txt)
+          gh release create "$tag" dist/jellymark.js "dist/jellymark-${tag}.zip" dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "JellyMark $tag" \
+            --notes-file .github/release-notes.md --latest
+

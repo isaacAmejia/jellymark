@@ -1,0 +1,42 @@
+{
+  "poll_seconds": 15,
+  "path_matching": {
+    "enabled": true,
+    "index_ttl_hours": 6
+  },
+  "title_year_fallback": true,
+  "server_a": {
+    "name": "Jellyfin A",
+    "url": "http://jellyfin-a.example:8096",
+    "api_key": "REPLACE_ME",
+    "verify_tls": true
+  },
+  "server_b": {
+    "name": "Jellyfin B",
+    "url": "http://jellyfin-b.example:8096",
+    "api_key": "REPLACE_ME",
+    "verify_tls": true
+  },
+  "pairs": [
+    {
+      "id": "example-pair",
+      "name": "User A \u2194 User B",
+      "enabled": false,
+      "a_user_id": "SERVER_A_USER_ID",
+      "a_user_name": "User A",
+      "b_user_id": "SERVER_B_USER_ID",
+      "b_user_name": "User B",
+      "direction": "both",
+      "bootstrap": "a_to_b",
+      "conflict": "a",
+      "auto_remove_watched": true,
+      "types": [
+        "Movie",
+        "Series",
+        "Season",
+        "Episode"
+      ]
+    }
+  ]
+}
+
