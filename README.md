@@ -1,6 +1,6 @@
 # JellyMark
 
-A personal Watchlist for Jellyfin, with optional syncing between two servers. **Use the Watchlist on its own—no sync service or KefinTweaks required.**
+**JellyMark adds a personal watchlist to Jellyfin Web and can optionally sync that watchlist between two Jellyfin servers.** Save movies, series, and seasons, track viewing progress and history, and keep paired users' Watchlists synchronized across separate Jellyfin instances. **The Watchlist works on its own—no sync service or KefinTweaks required.**
 
 - Save movies, series, and seasons with a bookmark button.
 - Browse Series Progress, movie/season Watch History, and Statistics.
@@ -10,6 +10,8 @@ A personal Watchlist for Jellyfin, with optional syncing between two servers. **
 **Based on [KefinTweaks Watchlist](https://github.com/ranaldsgift/KefinTweaks) by ranaldsgift.** JellyMark reuses and adapts substantial Watchlist code, with a standalone interface and optional cross-server sync. Thanks to the original author and contributors. [MIT license and credits](THIRD_PARTY_NOTICES.md).
 
 [Download the latest release](https://github.com/isaacAmejia/jellymark/releases/latest) · [What's changed](CHANGELOG.md)
+
+Trying to **add a Watchlist to Jellyfin** or **sync a Jellyfin Watchlist between two servers**? See [Jellyfin Watchlist and cross-server sync](docs/jellyfin-watchlist.md).
 
 Part of **JellyPi**, a larger project bringing together Jellyfin tools for a smoother TV experience. This Watchlist can also be used independently.
 
@@ -57,4 +59,3 @@ Sync shares Watchlist membership. It does **not** copy media files, playback pro
 - **Found a bug?** [Open an issue](https://github.com/isaacAmejia/jellymark/issues) with your Jellyfin/browser versions and steps to reproduce. Remove API keys, tokens, and personal details from screenshots or logs.
 
 JellyMark v3.2.1 includes Watchlist UI **3.2.1** and JellyMark Sync **3.0.1**. Licensed under [MIT](LICENSE).
-
