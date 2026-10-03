@@ -849,16 +849,27 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
         if(!['Escape','BrowserBack','GoBack'].includes(e.key))return;
         const dialog=document.querySelector('.jws3-dialog');
         if(!state.open&&!dialog)return;
+
         /*
-         * Always consume Back while JellyMark owns a visible surface. JellyNav
-         * may own the action semantics, but browser/Jellyfin history must never
-         * see the physical key and navigate the underlying page to Home.
+         * With JellyNav installed, JellyMark guards the browser default but
+         * deliberately leaves propagation alone so JellyNav can own the Back
+         * hierarchy regardless of which script registered its listener first.
          */
+        if(window.__JELLYFIN_TV_REMOTE__?.watchlistKeyOwnership){
+            e.preventDefault();
+            return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        if(window.__JELLYFIN_TV_REMOTE__?.watchlistKeyOwnership)return;
         if(dialog)dialog.jwsClose?.();else closeOverlay(true);
+    }
+    function escapeKeyupGuard(e){
+        if(!['Escape','BrowserBack','GoBack'].includes(e.key))return;
+        if(!window.__JELLYFIN_TV_REMOTE__?.watchlistKeyOwnership)return;
+        if(!state.open&&!document.querySelector('.jws3-dialog'))return;
+        e.preventDefault();
     }
 
     function hookUserDataEvents(){const socket=window.ApiClient?.webSocket||window.ApiClient?._webSocket;if(!socket||typeof socket.addEventListener!=='function')return;if(state.playbackSocket===socket&&state.playbackHooked)return;if(state.playbackSocket&&state.playbackHandler&&typeof state.playbackSocket.removeEventListener==='function'){try{state.playbackSocket.removeEventListener('message',state.playbackHandler);}catch{}}const handler=event=>{try{const raw=event?.Data||event?.data;const data=typeof raw==='string'?JSON.parse(raw):raw;if(data?.MessageType==='UserDataChanged'){for(const ud of data.Data?.UserDataList||[]){if(ud.ItemId&&ud.Played&&ud.Likes)autoRemovePlayed(ud.ItemId);}}}catch{}};socket.addEventListener('message',handler);state.playbackSocket=socket;state.playbackHandler=handler;state.playbackHooked=true;}
@@ -875,7 +886,7 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
         getSection:()=>state.topTab
     };
 
-    async function init(){installStyles();ensureOverlay();window.addEventListener('keydown',escapeHandler,true);state.observer=new MutationObserver(()=>{scheduleTabEnsure();scheduleDecorate();});state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{ensureHomeTab();if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
+    async function init(){installStyles();ensureOverlay();window.addEventListener('keydown',escapeHandler,true);window.addEventListener('keyup',escapeKeyupGuard,true);state.observer=new MutationObserver(()=>{scheduleTabEnsure();scheduleDecorate();});state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{ensureHomeTab();if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
     if(!state.open)return;
     const target=event.target instanceof Element?event.target:null;
     if(!target)return;
