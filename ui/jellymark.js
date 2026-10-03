@@ -35,7 +35,7 @@ SOFTWARE.
     if (window[MODULE]) return;
     window[MODULE] = true;
 
-    const VERSION = '3.2.1';
+    const VERSION = '3.2.2';
     const P = 'jws3';
     const OVERLAY_ID = `${P}-overlay`;
     const STYLE_ID = `${P}-style`;
@@ -764,11 +764,14 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
     function findTabHost(){for(const selector of ['.skinHeader .headerTabs','.headerTabs','.skinHeader .emby-tabs']){const c=[...document.querySelectorAll(selector)].filter(visible);const shell=c.find(x=>x.querySelector('.emby-tab-button'))||c[0];if(shell)return shell.querySelector('.emby-tabs-slider')||shell;}return null;}
     function syncHomeTabState(){const tab=document.getElementById(HOME_TAB_ID);if(!tab)return;tab.classList.toggle('emby-tab-button-active',state.open);tab.setAttribute('aria-selected',String(state.open));}
     function ensureHomeTab(){
-        if(!apiReady()||!uid()||(!state.open&&!homeVisible())){document.getElementById(HOME_TAB_ID)?.remove();return;}
-        const host=findTabHost();if(!host)return;
+        if(!apiReady()||!uid()){document.getElementById(HOME_TAB_ID)?.remove();return;}
+        const host=findTabHost();
+        if(!host)return;
+
         let tab=document.getElementById(HOME_TAB_ID);
         const native=[...host.querySelectorAll('.emby-tab-button')].filter(x=>x!==tab);
         const favorites=native.find(x=>x.dataset.index==='1')||native[1]||native[0];
+
         if(!tab){
             if(favorites){
                 tab=favorites.cloneNode(true);
@@ -784,13 +787,26 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
                 tab.className='emby-tab-button emby-button';
                 tab.textContent='Watchlist';
             }
+
             tab.id=HOME_TAB_ID;
             tab.setAttribute('aria-label','Watchlist');
             tab.setAttribute('role','tab');
             tab.setAttribute('aria-selected','false');
             tab.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();openOverlay();});
         }
-        if(favorites&&favorites.nextElementSibling!==tab)favorites.after(tab);else if(!tab.isConnected)host.appendChild(tab);
+
+        /*
+         * Treat Watchlist like a persistent native tab. Jellyfin can rebuild
+         * the header/tab slider on route changes; move the same tab node into
+         * the current live host instead of removing/recreating it.
+         */
+        if(tab.parentElement!==host){
+            if(favorites)favorites.after(tab);
+            else host.appendChild(tab);
+        }else if(favorites&&favorites.nextElementSibling!==tab){
+            favorites.after(tab);
+        }
+
         syncHomeTabState();
     }
 
@@ -826,13 +842,24 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
     function hookUserDataEvents(){const socket=window.ApiClient?.webSocket||window.ApiClient?._webSocket;if(!socket||typeof socket.addEventListener!=='function')return;if(state.playbackSocket===socket&&state.playbackHooked)return;if(state.playbackSocket&&state.playbackHandler&&typeof state.playbackSocket.removeEventListener==='function'){try{state.playbackSocket.removeEventListener('message',state.playbackHandler);}catch{}}const handler=event=>{try{const raw=event?.Data||event?.data;const data=typeof raw==='string'?JSON.parse(raw):raw;if(data?.MessageType==='UserDataChanged'){for(const ud of data.Data?.UserDataList||[]){if(ud.ItemId&&ud.Played&&ud.Likes)autoRemovePlayed(ud.ItemId);}}}catch{}};socket.addEventListener('message',handler);state.playbackSocket=socket;state.playbackHandler=handler;state.playbackHooked=true;}
     async function autoRemovePlayed(id){try{let item=state.liked.get(String(id));if(!item)item=await ApiClient.getItem(uid(),id);if(item&&EXPORT_TYPES.includes(item.Type)&&item.UserData?.Played===true)await setLiked(item,false);}catch(e){warn('Auto-remove failed',e);}}
 
-    async function init(){installStyles();ensureOverlay();window.addEventListener('keydown',escapeHandler,true);state.observer=new MutationObserver(scheduleDecorate);state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
+    window.__JELLYMARK__={
+        version:VERSION,
+        isOpen:()=>state.open,
+        open:()=>openOverlay(),
+        close:(restore=true)=>closeOverlay(restore),
+        ensureTab:()=>ensureHomeTab(),
+        getTab:()=>document.getElementById(HOME_TAB_ID),
+        getOverlay:()=>document.getElementById(OVERLAY_ID),
+        getSection:()=>state.topTab
+    };
+
+    async function init(){installStyles();ensureOverlay();window.addEventListener('keydown',escapeHandler,true);state.observer=new MutationObserver(scheduleDecorate);state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{ensureHomeTab();if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
     if(!state.open)return;
     const target=event.target instanceof Element?event.target:null;
     if(!target)return;
     if(target.closest('#'+OVERLAY_ID)||target.closest('.jws3-dialog')||target.closest('#'+HOME_TAB_ID))return;
     closeOverlay(false);
-},true);document.addEventListener('viewshow',scheduleDecorate,true);for(let i=0;i<120&&!apiReady();i++)await new Promise(r=>setTimeout(r,250));if(!apiReady()){warn('ApiClient unavailable');return;}try{await likedItems(true);}catch(e){warn('Initial Watchlist fetch failed',e);}scheduleDecorate();hookUserDataEvents();setInterval(()=>{if(uid())likedItems(true).catch(()=>{});hookUserDataEvents();},CARD_REFRESH_MS);log(`Loaded v${VERSION}`);}
+},true);document.addEventListener('viewshow',()=>{ensureHomeTab();scheduleDecorate();},true);for(let i=0;i<120&&!apiReady();i++)await new Promise(r=>setTimeout(r,250));if(!apiReady()){warn('ApiClient unavailable');return;}try{await likedItems(true);}catch(e){warn('Initial Watchlist fetch failed',e);}scheduleDecorate();hookUserDataEvents();setInterval(()=>{if(uid())likedItems(true).catch(()=>{});hookUserDataEvents();},CARD_REFRESH_MS);log(`Loaded v${VERSION}`);}
     init();
 })();
 
