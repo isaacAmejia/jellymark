@@ -171,16 +171,45 @@ html,.backgroundContainer:not(.withBackdrop):not(.backgroundContainer-transparen
       await new Promise(r=>setTimeout(r,650));obs.disconnect();return n;
     });
     assert.equal(mutations,0);
-    // An external navigation script may claim Back; Watchlist must not intercept it.
+    // An external navigation script may own semantics, but JellyMark must still
+    // consume Back at the browser boundary so Chromium/Jellyfin history cannot
+    // navigate underneath the open Watchlist.
     await ui.locator('#jws3-home-tab').click();
     await ui.evaluate(()=>{window.__JELLYFIN_TV_REMOTE__={watchlistKeyOwnership:true};});
-    const unhandled=await ui.evaluate(()=>['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape','BrowserBack','GoBack'].every(key=>{
-      const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});
-      window.dispatchEvent(event);return !event.defaultPrevented;
-    }));
-    assert.equal(unhandled,true);
+    const ownership=await ui.evaluate(()=>{
+      const result={};
+      for(const key of ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape','BrowserBack','GoBack']){
+        const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});
+        window.dispatchEvent(event);result[key]=event.defaultPrevented;
+      }
+      return result;
+    });
+    for(const key of ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter']) assert.equal(ownership[key],false);
+    for(const key of ['Escape','BrowserBack','GoBack']) assert.equal(ownership[key],true);
     assert.equal(await ui.locator('#jws3-overlay').isVisible(),true);
     assert.equal(await ui.locator('#jws3-overlay.actionSheet').count(),0);
+
+    // Jellyfin may replace the tab host on SPA navigation. JellyMark should
+    // move the same Watchlist tab node into the new live header in one frame.
+    const persistent=await ui.evaluate(async()=>{
+      const original=document.getElementById('jws3-home-tab');
+      original.dataset.persistenceProbe='same-node';
+      const old=document.querySelector('.headerTabs');
+      const replacement=old.cloneNode(true);
+      replacement.querySelector('#jws3-home-tab')?.remove();
+      old.replaceWith(replacement);
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+      const current=document.getElementById('jws3-home-tab');
+      return {
+        same:current===original,
+        probe:current?.dataset.persistenceProbe||null,
+        visible:!!current&&getComputedStyle(current).display!=='none'
+      };
+    });
+    assert.equal(persistent.same,true);
+    assert.equal(persistent.probe,'same-node');
+    assert.equal(persistent.visible,true);
     await ui.evaluate(()=>{delete window.__JELLYFIN_TV_REMOTE__;});
     await ui.keyboard.press('Escape');
     assert.equal(await ui.locator('#jws3-overlay').isVisible(),false);
