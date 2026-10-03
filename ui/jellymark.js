@@ -68,6 +68,7 @@ SOFTWARE.
         observer: null,
         decorateTimer: 0,
         tabEnsureFrame: 0,
+        tabNode: null,
         lastFocus: null,
         playbackHooked: false,
         playbackSocket: null,
@@ -763,13 +764,21 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
     function visible(el){if(!(el instanceof Element))return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0;}
     function homeVisible(){return [...document.querySelectorAll('.homePage,#homePage,#indexPage')].some(visible);}
     function findTabHost(){for(const selector of ['.skinHeader .headerTabs','.headerTabs','.skinHeader .emby-tabs']){const c=[...document.querySelectorAll(selector)].filter(visible);const shell=c.find(x=>x.querySelector('.emby-tab-button'))||c[0];if(shell)return shell.querySelector('.emby-tabs-slider')||shell;}return null;}
-    function syncHomeTabState(){const tab=document.getElementById(HOME_TAB_ID);if(!tab)return;tab.classList.toggle('emby-tab-button-active',state.open);tab.setAttribute('aria-selected',String(state.open));}
+    function syncHomeTabState(){const tab=state.tabNode||document.getElementById(HOME_TAB_ID);if(!tab)return;tab.classList.toggle('emby-tab-button-active',state.open);tab.setAttribute('aria-selected',String(state.open));}
     function ensureHomeTab(){
-        if(!apiReady()||!uid()){document.getElementById(HOME_TAB_ID)?.remove();return;}
+        if(!apiReady()||!uid()){
+            const existing=state.tabNode||document.getElementById(HOME_TAB_ID);
+            existing?.remove();
+            state.tabNode=null;
+            return;
+        }
+
         const host=findTabHost();
         if(!host)return;
 
-        let tab=document.getElementById(HOME_TAB_ID);
+        const live=document.getElementById(HOME_TAB_ID);
+        if(live&&live!==state.tabNode)state.tabNode=live;
+        let tab=state.tabNode;
         const native=[...host.querySelectorAll('.emby-tab-button')].filter(x=>x!==tab);
         const favorites=native.find(x=>x.dataset.index==='1')||native[1]||native[0];
 
@@ -794,6 +803,7 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
             tab.setAttribute('role','tab');
             tab.setAttribute('aria-selected','false');
             tab.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();openOverlay();});
+            state.tabNode=tab;
         }
 
         /*
@@ -881,7 +891,7 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
         open:()=>openOverlay(),
         close:(restore=true)=>closeOverlay(restore),
         ensureTab:()=>ensureHomeTab(),
-        getTab:()=>document.getElementById(HOME_TAB_ID),
+        getTab:()=>state.tabNode||document.getElementById(HOME_TAB_ID),
         getOverlay:()=>document.getElementById(OVERLAY_ID),
         getSection:()=>state.topTab
     };
