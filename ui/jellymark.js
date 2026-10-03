@@ -67,6 +67,7 @@ SOFTWARE.
         targetCache: new Map(),
         observer: null,
         decorateTimer: 0,
+        tabEnsureFrame: 0,
         lastFocus: null,
         playbackHooked: false,
         playbackSocket: null,
@@ -836,8 +837,29 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
     function decorateCards(){if(!apiReady()||!uid())return;document.querySelectorAll('.cardOverlayContainer').forEach(overlay=>{const card=overlay.closest('.card');if(!card)return;const id=card.getAttribute('data-id'),type=card.getAttribute('data-type');if(!id||!SUPPORTED_TYPES.includes(type))return;const host=overlay.querySelector('.cardOverlayButton-br');if(!host||host.querySelector(`.${CARD_BUTTON}`))return;const b=document.createElement('button');b.type='button';b.className=`${CARD_BUTTON} cardOverlayButton cardOverlayButton-hover paper-icon-button-light emby-button button-flat`;b.dataset.itemId=id;b.dataset.itemType=type;b.appendChild(bookmarkIcon());setToggleState(b,false);b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggleById(id,type,b);});host.appendChild(b);refreshToggleButton(b);});}
     function updateVisibleToggleStates(){document.querySelectorAll(`.${DETAIL_BUTTON},.${CARD_BUTTON}`).forEach(b=>refreshToggleButton(b));}
 
-    function scheduleDecorate(){clearTimeout(state.decorateTimer);state.decorateTimer=setTimeout(async()=>{try{ensureHomeTab();ensureSideLink();await ensureDetailButton();decorateCards();}catch(e){warn('Decoration pass failed',e);}},150);}
-    function escapeHandler(e){if(!['Escape','BrowserBack','GoBack'].includes(e.key))return;const dialog=document.querySelector('.jws3-dialog');if(!state.open&&!dialog)return;if(window.__JELLYFIN_TV_REMOTE__?.watchlistKeyOwnership)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(dialog)dialog.jwsClose?.();else closeOverlay(true);}
+    function scheduleTabEnsure(){
+        if(state.tabEnsureFrame)return;
+        state.tabEnsureFrame=requestAnimationFrame(()=>{
+            state.tabEnsureFrame=0;
+            try{ensureHomeTab();}catch(e){warn('Tab maintenance failed',e);}
+        });
+    }
+    function scheduleDecorate(){scheduleTabEnsure();clearTimeout(state.decorateTimer);state.decorateTimer=setTimeout(async()=>{try{ensureHomeTab();ensureSideLink();await ensureDetailButton();decorateCards();}catch(e){warn('Decoration pass failed',e);}},150);}
+    function escapeHandler(e){
+        if(!['Escape','BrowserBack','GoBack'].includes(e.key))return;
+        const dialog=document.querySelector('.jws3-dialog');
+        if(!state.open&&!dialog)return;
+        /*
+         * Always consume Back while JellyMark owns a visible surface. JellyNav
+         * may own the action semantics, but browser/Jellyfin history must never
+         * see the physical key and navigate the underlying page to Home.
+         */
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        if(window.__JELLYFIN_TV_REMOTE__?.watchlistKeyOwnership)return;
+        if(dialog)dialog.jwsClose?.();else closeOverlay(true);
+    }
 
     function hookUserDataEvents(){const socket=window.ApiClient?.webSocket||window.ApiClient?._webSocket;if(!socket||typeof socket.addEventListener!=='function')return;if(state.playbackSocket===socket&&state.playbackHooked)return;if(state.playbackSocket&&state.playbackHandler&&typeof state.playbackSocket.removeEventListener==='function'){try{state.playbackSocket.removeEventListener('message',state.playbackHandler);}catch{}}const handler=event=>{try{const raw=event?.Data||event?.data;const data=typeof raw==='string'?JSON.parse(raw):raw;if(data?.MessageType==='UserDataChanged'){for(const ud of data.Data?.UserDataList||[]){if(ud.ItemId&&ud.Played&&ud.Likes)autoRemovePlayed(ud.ItemId);}}}catch{}};socket.addEventListener('message',handler);state.playbackSocket=socket;state.playbackHandler=handler;state.playbackHooked=true;}
     async function autoRemovePlayed(id){try{let item=state.liked.get(String(id));if(!item)item=await ApiClient.getItem(uid(),id);if(item&&EXPORT_TYPES.includes(item.Type)&&item.UserData?.Played===true)await setLiked(item,false);}catch(e){warn('Auto-remove failed',e);}}
@@ -853,7 +875,7 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
         getSection:()=>state.topTab
     };
 
-    async function init(){installStyles();ensureOverlay();window.addEventListener('keydown',escapeHandler,true);state.observer=new MutationObserver(scheduleDecorate);state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{ensureHomeTab();if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
+    async function init(){installStyles();ensureOverlay();window.addEventListener('keydown',escapeHandler,true);state.observer=new MutationObserver(()=>{scheduleTabEnsure();scheduleDecorate();});state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{ensureHomeTab();if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
     if(!state.open)return;
     const target=event.target instanceof Element?event.target:null;
     if(!target)return;
