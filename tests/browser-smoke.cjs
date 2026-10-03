@@ -164,6 +164,8 @@ html,.backgroundContainer:not(.withBackdrop):not(.backgroundContainer-transparen
     await ui.locator('#jws3-home-tab').click();
     await ui.getByText('Test Movie', {exact:true}).waitFor();
     await ui.keyboard.press('Escape');
+    await ui.locator('#jws3-home-tab').click();
+    await ui.locator('.jws3-card-button').waitFor();
     // Repeated decoration must settle rather than triggering an observer loop.
     const mutations = await ui.evaluate(async () => {
       let n=0; const obs=new MutationObserver(()=>n++);
