@@ -177,17 +177,31 @@ html,.backgroundContainer:not(.withBackdrop):not(.backgroundContainer-transparen
     // consume Back at the browser boundary so Chromium/Jellyfin history cannot
     // navigate underneath the open Watchlist.
     await ui.locator('#jws3-home-tab').click();
-    await ui.evaluate(()=>{window.__JELLYFIN_TV_REMOTE__={watchlistKeyOwnership:true};});
+    await ui.evaluate(()=>{
+      window.__JELLYFIN_TV_REMOTE__={watchlistKeyOwnership:true};
+      window.delegatedBackDown=0;window.delegatedBackUp=0;
+      window.addEventListener('keydown',e=>{if(['Escape','BrowserBack','GoBack'].includes(e.key))window.delegatedBackDown++;},true);
+      window.addEventListener('keyup',e=>{if(['Escape','BrowserBack','GoBack'].includes(e.key))window.delegatedBackUp++;},true);
+    });
     const ownership=await ui.evaluate(()=>{
       const result={};
       for(const key of ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape','BrowserBack','GoBack']){
         const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});
         window.dispatchEvent(event);result[key]=event.defaultPrevented;
       }
+      for(const key of ['Escape','BrowserBack','GoBack']){
+        const event=new KeyboardEvent('keyup',{key,bubbles:true,cancelable:true});
+        window.dispatchEvent(event);result[key+'Up']=event.defaultPrevented;
+      }
       return result;
     });
     for(const key of ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter']) assert.equal(ownership[key],false);
-    for(const key of ['Escape','BrowserBack','GoBack']) assert.equal(ownership[key],true);
+    for(const key of ['Escape','BrowserBack','GoBack']){
+      assert.equal(ownership[key],true);
+      assert.equal(ownership[key+'Up'],true);
+    }
+    assert.equal(await ui.evaluate(()=>window.delegatedBackDown),3);
+    assert.equal(await ui.evaluate(()=>window.delegatedBackUp),3);
     assert.equal(await ui.locator('#jws3-overlay').isVisible(),true);
     assert.equal(await ui.locator('#jws3-overlay.actionSheet').count(),0);
 
