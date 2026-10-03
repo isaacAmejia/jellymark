@@ -19,11 +19,32 @@ Part of **JellyPi**, a larger project bringing together Jellyfin tools for a smo
 
 You need Jellyfin web and the [JavaScript Injector plugin](https://github.com/n00bcodr/Jellyfin-JavaScript-Injector).
 
+### Recommended: GitHub auto-update loader
+
+This keeps a small loader in JavaScript Injector and downloads the current stable JellyMark UI from this repository's `main` branch whenever Jellyfin Web loads.
+
+1. In Jellyfin, open **Dashboard → JavaScript Injector → Add Script**.
+2. Name it **JellyMark Loader**.
+3. Copy the full contents of [`install/remote-loader.js`](install/remote-loader.js).
+4. Paste it as JavaScript, enable it, and save.
+5. Disable/remove any older full JellyMark UI script entry.
+6. If you use KefinTweaks, disable its Watchlist module to avoid duplicate controls.
+7. Fully reload Jellyfin.
+
+After future stable JellyMark UI changes are pushed to `main`, reload Jellyfin Web to receive them. The loader stores the last successfully downloaded UI build in browser storage as a fallback if GitHub is temporarily unreachable.
+
+Raw stable loader:
+
+`https://raw.githubusercontent.com/isaacAmejia/jellymark/main/install/remote-loader.js`
+
+### Manual install
+
+If you prefer a pinned/manual copy:
+
 1. Download **jellymark.js** from the release, or open [the script](ui/jellymark.js) and click **Raw**.
-2. In Jellyfin, open **Dashboard → JavaScript Injector → Add Script**.
-3. Name it **JellyMark**, paste the entire file as JavaScript, enable it, and save. Do not include `<script>` tags or Markdown fences.
-4. If you use KefinTweaks, disable its Watchlist module to avoid duplicate controls. Your existing entries are kept.
-5. Fully reload Jellyfin. Open **Watchlist** beside your Home tabs or from the sidebar.
+2. Add a JavaScript Injector entry named **JellyMark**.
+3. Paste the entire file as JavaScript, enable it, and save.
+4. Fully reload Jellyfin.
 
 An outlined bookmark adds an item; a filled bookmark removes it. Bookmarking an episode saves its season. Watched items are automatically removed from the Watchlist.
 
@@ -53,7 +74,7 @@ Sync shares Watchlist membership. It does **not** copy media files, playback pro
 
 ## Updates and help
 
-- **Watchlist:** replace the existing Injector script with the new file and fully reload Jellyfin.
+- **Watchlist UI:** if you use the recommended JellyMark Loader, just reload Jellyfin Web after a stable update is pushed to `main`. If you installed the full UI script manually, replace it with the new file and reload.
 - **Sync service:** back up your data, extract the new release, then run `DATA_DIR=/absolute/path/to/existing/data bash run-docker.sh`. If upgrading an existing container with a different name, also set `CONTAINER_NAME` to that name. Keep using the same data folder; it contains your settings, admin token, and sync history.
 - **Trouble connecting or syncing?** See [setup options and troubleshooting](docs/setup.md).
 - **Found a bug?** [Open an issue](https://github.com/isaacAmejia/jellymark/issues) with your Jellyfin/browser versions and steps to reproduce. Remove API keys, tokens, and personal details from screenshots or logs.
