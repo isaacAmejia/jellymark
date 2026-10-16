@@ -29,6 +29,15 @@ class UIStaticTests(unittest.TestCase):
         ]:
             self.assertIn(marker, text)
 
+    def test_watchlist_appears_only_in_top_navigation(self):
+        text = UI.read_text()
+        self.assertIn('function ensureHomeTab()', text)
+        self.assertIn('function removeLegacySideLink()', text)
+        self.assertIn('removeLegacySideLink();', text)
+        self.assertNotIn('function ensureSideLink()', text)
+        self.assertNotIn('ensureSideLink();', text)
+
+
     def test_does_not_own_directional_navigation(self):
         text = UI.read_text()
         self.assertNotIn("'ArrowLeft'", text)
