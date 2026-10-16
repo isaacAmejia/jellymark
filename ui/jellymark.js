@@ -35,7 +35,7 @@ SOFTWARE.
     if (window[MODULE]) return;
     window[MODULE] = true;
 
-    const VERSION = '3.2.2';
+    const VERSION = '3.2.3';
     const P = 'jws3';
     const OVERLAY_ID = `${P}-overlay`;
     const STYLE_ID = `${P}-style`;
@@ -821,7 +821,8 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
         syncHomeTabState();
     }
 
-    function ensureSideLink(){if(!apiReady()||!uid())return;if(document.getElementById(SIDE_LINK_ID))return;const menus=[...document.querySelectorAll('.mainDrawer-scrollContainer,.mainDrawer .scrollContainer')];const host=menus.find(visible)||menus[0];if(!host)return;const a=button('Watchlist',()=>openOverlay(),'navMenuOption emby-button');a.id=SIDE_LINK_ID;a.style.width='100%';a.style.textAlign='left';host.appendChild(a);}
+    // Remove sidebar links inserted by older JellyMark builds. Navigation lives in the top tabs only.
+    function removeLegacySideLink(){document.querySelectorAll(`#${SIDE_LINK_ID}`).forEach(link=>link.remove());}
 
     function currentDetailPage(){return [...document.querySelectorAll('.itemDetailPage')].find(visible)||null;}
     function currentItemId(){const p=currentDetailPage();if(!p)return null;try{const hash=location.hash||'';const q=hash.includes('?')?hash.slice(hash.indexOf('?')+1):'';return new URLSearchParams(q).get('id')||p.dataset?.id||null;}catch{return p.dataset?.id||null;}}
@@ -854,7 +855,7 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
             try{ensureHomeTab();}catch(e){warn('Tab maintenance failed',e);}
         });
     }
-    function scheduleDecorate(){scheduleTabEnsure();clearTimeout(state.decorateTimer);state.decorateTimer=setTimeout(async()=>{try{ensureHomeTab();ensureSideLink();await ensureDetailButton();decorateCards();}catch(e){warn('Decoration pass failed',e);}},150);}
+    function scheduleDecorate(){scheduleTabEnsure();clearTimeout(state.decorateTimer);state.decorateTimer=setTimeout(async()=>{try{removeLegacySideLink();ensureHomeTab();await ensureDetailButton();decorateCards();}catch(e){warn('Decoration pass failed',e);}},150);}
     function escapeHandler(e){
         if(!['Escape','BrowserBack','GoBack'].includes(e.key))return;
         const dialog=document.querySelector('.jws3-dialog');
@@ -896,7 +897,7 @@ button.${DETAIL_BUTTON}:focus,button.${CARD_BUTTON}:focus{background-color:rgba(
         getSection:()=>state.topTab
     };
 
-    async function init(){installStyles();ensureOverlay();window.addEventListener('keydown',escapeHandler,true);window.addEventListener('keyup',escapeKeyupGuard,true);state.observer=new MutationObserver(()=>{scheduleTabEnsure();scheduleDecorate();});state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{ensureHomeTab();if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
+    async function init(){installStyles();ensureOverlay();removeLegacySideLink();window.addEventListener('keydown',escapeHandler,true);window.addEventListener('keyup',escapeKeyupGuard,true);state.observer=new MutationObserver(()=>{scheduleTabEnsure();scheduleDecorate();});state.observer.observe(document.documentElement,{childList:true,subtree:true});window.addEventListener('hashchange',()=>{ensureHomeTab();if(state.open&&location.hash!==state.openedHash)closeOverlay(false);scheduleDecorate()});window.addEventListener('resize',()=>{if(state.open)updateThemeAndBounds()});document.addEventListener('click',event=>{
     if(!state.open)return;
     const target=event.target instanceof Element?event.target:null;
     if(!target)return;
