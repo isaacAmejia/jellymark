@@ -80,11 +80,20 @@ html,.backgroundContainer:not(.withBackdrop):not(.backgroundContainer-transparen
         accessToken:()=> 'fake', getItem: async()=> ({Id:'movie1',Name:'Test Movie',Type:'Movie',UserData:{Played:false}})};
     });
     await ui.reload();
+    // Simulate a sidebar link left by an older JellyMark build.
+    await ui.evaluate(() => {
+      const staleLink = document.createElement('button');
+      staleLink.id = 'jws3-side-link';
+      staleLink.textContent = 'Watchlist';
+      document.querySelector('.mainDrawer-scrollContainer').appendChild(staleLink);
+    });
     await ui.addScriptTag({path:path.join(__dirname,'../ui/jellymark.js')});
     await ui.locator('#jws3-home-tab').waitFor();
     await ui.locator('#jws3-home-tab').click();
     await ui.getByText('Test Movie', {exact:true}).waitFor();
     assert.deepEqual(await ui.locator('.headerTabs>.emby-tab-button').allTextContents(), ['Home','Favorites','Watchlist','Discover']);
+    assert.equal(await ui.locator('#jws3-side-link').count(),0);
+    assert.equal(await ui.locator('.mainDrawer-scrollContainer button').count(),0);
     assert.equal(await ui.locator('.headerTabs [data-index="1"]').isVisible(), false);
     assert.deepEqual(await ui.locator('.jws3-chips button').allTextContents(), ['All','Movies','Shows']);
     const headerBounds=await ui.locator('.skinHeader').boundingBox(),panelBounds=await ui.locator('#jws3-overlay').boundingBox();
