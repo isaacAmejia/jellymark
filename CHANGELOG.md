@@ -1,5 +1,9 @@
 # Changelog
 
+## JellyMark UI v3.2.3 — 2026-10-16
+
+- Keep Watchlist exclusively in the top navigation; remove the duplicate Jellyfin sidebar entry, including any leftover entry from an older build.
+
 ## JellyMark v3.2.1 — 2026-09-30
 
 First public JellyMark release, part of the larger JellyPi project.
