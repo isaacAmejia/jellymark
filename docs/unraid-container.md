@@ -20,6 +20,14 @@ When migrating an existing installation:
 4. Import and verify a native XML template before letting DockerMan recreate
    the container. Set Auto-Start in Unraid after validating the new instance.
 
+A generic v2 starting template is provided at `unraid/templates/my-JellySync.xml`.
+It deliberately uses the public install defaults, not private server settings.
+Set **Repository** to the live image tag (which may be newer than this repo),
+set the exact existing /data host path, and prepare the private
+`/boot/config/plugins/jellymark-sync/credentials.env` file containing the
+existing `JWS_ADMIN_TOKEN` locally on Unraid. Never publish the token or
+paste it into the template. Review the resulting command using **Dry Run**.
+
 `run-docker.sh` refuses to create a parallel `JellySync` when one of the older
 `jellyfin-watchlist-sync` or `jellymark-sync` containers exists. It also refuses
 to replace any native DockerMan-managed container.

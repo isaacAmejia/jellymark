@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Container version="2">
+  <Name>JellySync</Name>
+  <Repository>jellymark:local</Repository>
+  <Registry/>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Project>https://github.com/isaacAmejia/jellymark</Project>
+  <Overview>JellyMark bidirectional cross-server Watchlist synchronization. Before importing, set Repository to the exact image tag already deployed and set the existing /data location.</Overview>
+  <Category>MediaApp:Other Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8788]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/isaacAmejia/jellymark/main/assets/unraid/jellysync.png</Icon>
+  <ExtraParams>--env-file=/boot/config/plugins/jellymark-sync/credentials.env</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <Config Name="Watchlist Data" Target="/data" Default="/mnt/user/appdata/jellymark" Mode="rw" Description="Set this to the existing /data bind directory before applying. Never point at a blank directory during migration." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/jellymark</Config>
+  <Config Name="Web Port" Target="8788" Default="8788" Mode="tcp" Description="JellyMark sync dashboard" Type="Port" Display="always" Required="true" Mask="false">8788</Config>
+</Container>
