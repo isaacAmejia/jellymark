@@ -18,4 +18,6 @@
   <CPUset/>
   <Config Name="Watchlist Data" Target="/data" Default="/mnt/user/appdata/jellymark" Mode="rw" Description="Set this to the existing /data bind directory before applying. Never point at a blank directory during migration." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/jellymark</Config>
   <Config Name="Web Port" Target="8788" Default="8788" Mode="tcp" Description="JellyMark sync dashboard" Type="Port" Display="always" Required="true" Mask="false">8788</Config>
+  <Config Name="Application Data Directory" Target="DATA_DIR" Default="/data" Mode="" Description="Existing JellyMark application data path inside the container" Type="Variable" Display="advanced" Required="true" Mask="false">/data</Config>
+  <Config Name="Application Port" Target="PORT" Default="8788" Mode="" Description="Existing internal JellyMark HTTP port" Type="Variable" Display="advanced" Required="true" Mask="false">8788</Config>
 </Container>
